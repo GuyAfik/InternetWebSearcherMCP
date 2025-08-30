@@ -1,0 +1,10 @@
+[project]
+name = "internetwebsearchermcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "crawl4ai>=0.7.4",
+    "fastmcp>=2.11.3",
+]
