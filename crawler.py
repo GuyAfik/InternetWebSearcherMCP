@@ -19,20 +19,6 @@ import requests
 
 class Crawler(AsyncWebCrawler):
 
-    def __init__(
-        self,
-        crawler_strategy: AsyncCrawlerStrategy = None,
-        config: BrowserConfig = None,
-        base_directory: str = str(os.getenv("CRAWL4_AI_BASE_DIRECTORY", Path.home())),
-        thread_safe: bool = False,
-        logger: AsyncLoggerBase = None,
-        **kwargs,
-    ):
-        super().__init__(
-            crawler_strategy, config, base_directory, thread_safe, logger, **kwargs
-        )
-        self.requests = requests
-
     @property
     def adaptive_crawling(self) -> AdaptiveCrawler:
         return AdaptiveCrawler(self)
@@ -48,7 +34,7 @@ class Crawler(AsyncWebCrawler):
     async def crawl_sitemap(
         self, sitemap_url: str, max_concurrent: int = 10
     ) -> List[Dict[str, Any]]:
-        resp = self.requests.get(sitemap_url)
+        resp = requests.get(sitemap_url)
         urls = []
 
         if resp.status_code == 200:
