@@ -821,6 +821,7 @@ dependencies = [
     { name = "crawl4ai" },
     { name = "fastmcp" },
     { name = "pre-commit" },
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -828,6 +829,7 @@ requires-dist = [
     { name = "crawl4ai", specifier = ">=0.7.4" },
     { name = "fastmcp", specifier = ">=2.11.3" },
     { name = "pre-commit", specifier = ">=4.3.0" },
+    { name = "requests", specifier = ">=2.32.5" },
 ]
 
 [[package]]
