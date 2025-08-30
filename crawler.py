@@ -11,6 +11,7 @@ from crawl4ai import (
     CrawlerRunConfig,
     CacheMode,
     MemoryAdaptiveDispatcher,
+    AdaptiveCrawler,
 )
 from crawl4ai.async_crawler_strategy import AsyncCrawlerStrategy
 import requests
@@ -31,6 +32,10 @@ class Crawler(AsyncWebCrawler):
             crawler_strategy, config, base_directory, thread_safe, logger, **kwargs
         )
         self.requests = requests
+
+    @property
+    def adaptive_crawling(self) -> AdaptiveCrawler:
+        return AdaptiveCrawler(self)
 
     async def crawl_markdown(self, url: str) -> List[Dict[str, Any]]:
         result = await self.arun(url=url, config=CrawlerRunConfig())

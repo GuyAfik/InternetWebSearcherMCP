@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 
 from crawler import Crawler
 from fastmcp import FastMCP, Context
@@ -7,6 +8,7 @@ from lifespan import mcp_context_lifespan, MCPContext
 from crawl4ai import CrawlerRunConfig, CacheMode, CrawlResult
 import wikipedia
 from utils import is_sitemap_url, is_text_url_file
+
 
 mcp = FastMCP(
     "mcp-internet-web-searcher",
@@ -101,11 +103,31 @@ async def indepth_crawl_url(
 
     except Exception as e:
         print(f"Failed to crawl url {url}: {e}")
+        traceback.print_exc()
         return json.dumps({"success": False, "url": url, "error": str(e)}, indent=4)
 
 
+# @mcp.tool("adaptive_crawling")
+async def adaptive_crawling(ctx: MCPContext, url: str, query: str):
+    crawler = ctx.crawler.adaptive_crawling
+
+    result = await crawler.digest(start_url=url, query=query)
+    return json.dumps(
+        {
+            "success": True,
+            "url": url,
+            "urls_crawled": [doc.url for doc in result.knowledge_base][:5],
+            "pages_crawled": len(result.knowledge_base),
+            "results": [
+                {"url": url, "markdown": crawl_result.markdown}
+                for crawl_result in result.knowledge_base
+            ],
+        }
+    )
+
+
 # @mcp.tool("wikipedia_search")
-def wikipedia_search(
+async def wikipedia_search(
     ctx: Context, query: str, sentences: int = 3, language: str = "en"
 ) -> str:
     print("wikipedia called")
