@@ -1,19 +1,14 @@
-import os
-from pathlib import Path
 from typing import List, Dict, Any
 from urllib.parse import urldefrag
 from xml.etree import ElementTree
 
 from crawl4ai import (
     AsyncWebCrawler,
-    BrowserConfig,
-    AsyncLoggerBase,
     CrawlerRunConfig,
     CacheMode,
     MemoryAdaptiveDispatcher,
     AdaptiveCrawler,
 )
-from crawl4ai.async_crawler_strategy import AsyncCrawlerStrategy
 import requests
 
 
@@ -23,7 +18,7 @@ class Crawler(AsyncWebCrawler):
     def adaptive_crawling(self) -> AdaptiveCrawler:
         return AdaptiveCrawler(self)
 
-    async def crawl_markdown(self, url: str) -> List[Dict[str, Any]]:
+    async def simple_crawl(self, url: str) -> List[Dict[str, Any]]:
         result = await self.arun(url=url, config=CrawlerRunConfig())
         if result.success and result.markdown:
             return [{"url": url, "markdown": result.markdown}]
@@ -48,7 +43,9 @@ class Crawler(AsyncWebCrawler):
             return await self.crawl_multiple_urls(urls, max_concurrent=max_concurrent)
         return urls
 
-    async def crawl_multiple_urls(self, urls: List[str], max_concurrent: int = 10):
+    async def crawl_multiple_urls(
+        self, urls: List[str], max_concurrent: int = 10
+    ) -> List[Dict[str, Any]]:
         crawl_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
         dispatcher = MemoryAdaptiveDispatcher(
             memory_threshold_percent=70.0,

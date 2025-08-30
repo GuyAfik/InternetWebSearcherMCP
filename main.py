@@ -71,7 +71,7 @@ async def indepth_crawl_url(
     try:
         crawler: Crawler = ctx.crawler
         if is_text_url_file(url):
-            crawl_results = await crawler.crawl_markdown(url)
+            crawl_results = await crawler.simple_crawl(url)
             crawl_type = "text_file"
         elif is_sitemap_url(url):
             crawl_type = "sitemap"
