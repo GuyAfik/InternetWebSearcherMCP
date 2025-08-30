@@ -3,7 +3,7 @@ import os
 
 from crawler import Crawler
 from fastmcp import FastMCP, Context
-from lifespan import mcp_context_lifespan
+from lifespan import mcp_context_lifespan, MCPContext
 from crawl4ai import CrawlerRunConfig, CacheMode, CrawlResult
 import wikipedia
 from utils import is_sitemap_url, is_text_url_file
@@ -16,8 +16,8 @@ mcp = FastMCP(
 )
 
 
-@mcp.tool()
-async def crawl_single_page(ctx: Context, url: str) -> str:
+# @mcp.tool("crawl_single_url_page")
+async def crawl_single_page(ctx: MCPContext, url: str) -> str:
     """
     Crawl a single web page and returns its content.
 
@@ -33,19 +33,19 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
     print("crawl_single_page called")
     try:
         run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
-        crawler = ctx.request_context.lifespan_context.crawler
+        crawler = ctx.crawler
         result: CrawlResult = await crawler.arun(url=url, config=run_config)
         if result.success:
-            return result.model_dump_json()
+            return json.dumps({"url": url, "markdown": result.markdown})
         return f"Failed to crawl url {url}"
     except Exception as e:
         print(f"Failed to crawl url {url}: {e}")
         return f"Failed to crawl url {url}"
 
 
-@mcp.tool()
+# @mcp.tool("deep_crawl_url")
 async def indepth_crawl_url(
-    ctx: Context, url: str, max_depth: int = 3, max_concurrent: int = 10
+    ctx: MCPContext, url: str, max_depth: int = 3, max_concurrent: int = 10
 ) -> str:
     """
     Intelligently crawl a URL based on its type and store content in Supabase.
@@ -67,7 +67,7 @@ async def indepth_crawl_url(
     """
     print("indepth_crawl_url called")
     try:
-        crawler: Crawler = ctx.request_context.lifespan_context.crawler
+        crawler: Crawler = ctx.crawler
         if is_text_url_file(url):
             crawl_results = await crawler.crawl_markdown(url)
             crawl_type = "text_file"
@@ -92,6 +92,7 @@ async def indepth_crawl_url(
                 "success": True,
                 "crawl_type": crawl_type,
                 "url": url,
+                "results": crawl_results,
                 "pages_crawled": len(crawl_results),
                 "urls_crawled": [doc["url"] for doc in crawl_results][:5]
                 + (["..."] if len(crawl_results) > 5 else []),
@@ -103,8 +104,8 @@ async def indepth_crawl_url(
         return json.dumps({"success": False, "url": url, "error": str(e)}, indent=4)
 
 
-@mcp.tool()
-def wikipedia(
+# @mcp.tool("wikipedia_search")
+def wikipedia_search(
     ctx: Context, query: str, sentences: int = 3, language: str = "en"
 ) -> str:
     print("wikipedia called")
@@ -154,7 +155,7 @@ def wikipedia(
 
 
 def main():
-    mcp.run()
+    mcp.run(transport="http")
 
 
 if __name__ == "__main__":
