@@ -17,10 +17,22 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-async def crawl_single_page(context: Context, url: str) -> str:
+async def crawl_single_page(ctx: Context, url: str) -> str:
+    """
+    Crawl a single web page and returns its content.
+
+    This tool is ideal for quickly retrieving content from a specific URL without following links.
+
+    Args:
+        ctx: The MCP server provided context
+        url: URL of the web page to crawl
+
+    Returns:
+        str: a json representation including URL markdown data.
+    """
     try:
         run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
-        crawler = context.request_context.lifespan_context.crawler
+        crawler = ctx.request_context.lifespan_context.crawler
         result: CrawlResult = await crawler.arun(url=url, config=run_config)
         if result.success:
             return result.model_dump_json()
@@ -34,6 +46,24 @@ async def crawl_single_page(context: Context, url: str) -> str:
 async def indepth_crawl_url(
     ctx: Context, url: str, max_depth: int = 3, max_concurrent: int = 10
 ) -> str:
+    """
+    Intelligently crawl a URL based on its type and store content in Supabase.
+
+    This tool automatically detects the URL type and applies the appropriate crawling method:
+    - For sitemaps: Extracts and crawls all URLs in parallel
+    - For text files (llms.txt): Directly retrieves the content
+    - For regular webpages: Recursively crawls internal links up to the specified depth
+
+    Args:
+        ctx: The MCP server provided context
+        url: URL to crawl (can be a regular webpage, sitemap.xml, or .txt file)
+        max_depth: Maximum recursion depth for regular URLs (default: 3)
+        max_concurrent: Maximum number of concurrent browser sessions (default: 10)
+
+    Returns:
+        str: a json representation including URL markdown data.
+
+    """
     try:
         crawler: Crawler = ctx.request_context.lifespan_context.crawler
         if is_text_url_file(url):
