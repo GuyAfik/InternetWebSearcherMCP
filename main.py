@@ -1,5 +1,10 @@
+from fastmcp import FastMCP
+
+mcp = FastMCP(name="web-crawler-mcp")
+
+
 def main():
-    print("Hello from internetwebsearchermcp!")
+    mcp.run()
 
 
 if __name__ == "__main__":
