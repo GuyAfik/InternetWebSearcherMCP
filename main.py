@@ -6,7 +6,7 @@ from fastmcp import FastMCP, Context
 from lifespan import mcp_context_lifespan
 from crawl4ai import CrawlerRunConfig, CacheMode, CrawlResult
 
-from sitemap import is_sitemap_url
+from utils import is_sitemap_url, is_text_url_file
 
 mcp = FastMCP(
     "mcp-internet-web-searcher",
@@ -14,10 +14,6 @@ mcp = FastMCP(
     host=os.getenv("HOST", "0.0.0.0"),
     port=os.getenv("PORT", 8051),
 )
-
-
-def is_text_url_file(url: str) -> bool:
-    return url.endswith(".txt")
 
 
 @mcp.tool()
@@ -38,7 +34,6 @@ async def crawl_single_page(context: Context, url: str) -> str:
 async def indepth_crawl_url(
     ctx: Context, url: str, max_depth: int = 3, max_concurrent: int = 10
 ) -> str:
-    crawl_type = ""
     try:
         crawler: Crawler = ctx.request_context.lifespan_context.crawler
         if is_text_url_file(url):
@@ -63,6 +58,7 @@ async def indepth_crawl_url(
         return json.dumps(
             {
                 "success": True,
+                "crawl_type": crawl_type,
                 "url": url,
                 "pages_crawled": len(crawl_results),
                 "urls_crawled": [doc["url"] for doc in crawl_results][:5]
@@ -72,6 +68,7 @@ async def indepth_crawl_url(
 
     except Exception as e:
         print(f"Failed to crawl url {url}: {e}")
+        return json.dumps({"success": False, "url": url, "error": str(e)}, indent=4)
 
 
 def main():

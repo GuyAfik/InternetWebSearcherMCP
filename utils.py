@@ -12,3 +12,7 @@ def is_sitemap_url(url: str) -> bool:
         True if the URL is a sitemap, False otherwise
     """
     return url.endswith("sitemap.xml") or "sitemap" in urlparse(url).path
+
+
+def is_text_url_file(url: str) -> bool:
+    return url.endswith(".txt")
