@@ -10,7 +10,6 @@ from main import (
 
 
 async def client_testing():
-
     result = await wikipedia_search(None, query="python programming", sentences=50)
     print(result)
 

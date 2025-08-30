@@ -109,6 +109,17 @@ async def indepth_crawl_url(
 
 # @mcp.tool("adaptive_crawling")
 async def adaptive_crawling(ctx: MCPContext, url: str, query: str):
+    """
+    Starts at a URL and intelligently crawls linked pages to find an answer to a query.
+
+    Args:
+        ctx: The MCP server provided context
+        url: The initial URL to start crawling from.
+        query: The question or query to find answers for.
+
+    Returns:
+        A JSON object containing the crawled pages and a synthesized summary.
+    """
     crawler = ctx.crawler.adaptive_crawling
 
     result = await crawler.digest(start_url=url, query=query)
@@ -130,6 +141,18 @@ async def adaptive_crawling(ctx: MCPContext, url: str, query: str):
 async def wikipedia_search(
     ctx: Context, query: str, sentences: int = 3, language: str = "en"
 ) -> str:
+    """
+    Searches Wikipedia for a query and returns a summary of the top result.
+
+    Args:
+        ctx: The MCP server provided context
+        query: The search query.
+        sentences: The number of sentences to include in the summary.
+        language: The language code for Wikipedia (e.g., 'en', 'es', 'de').
+
+    Returns:
+        A JSON object with the article title, summary, and URL.
+    """
     print("wikipedia called")
     try:
         wikipedia.set_lang(language)  # Set default language
