@@ -2,6 +2,8 @@ import json
 import os
 import traceback
 
+import aiohttp
+
 from crawler import Crawler
 from fastmcp import FastMCP, Context
 from lifespan import mcp_context_lifespan, MCPContext
@@ -18,8 +20,8 @@ mcp = FastMCP(
 )
 
 
-# @mcp.tool("crawl_single_url_page")
-async def crawl_single_page(ctx: MCPContext, url: str) -> str:
+@mcp.tool("crawl_single_url_page")
+async def crawl_single_page(ctx: Context, url: str) -> str:
     """
     Crawl a single web page and returns its content.
 
@@ -32,25 +34,28 @@ async def crawl_single_page(ctx: MCPContext, url: str) -> str:
     Returns:
         str: a json representation including URL markdown data.
     """
-    print("crawl_single_page called")
     try:
         run_config = CrawlerRunConfig(cache_mode=CacheMode.BYPASS, stream=False)
-        crawler = ctx.crawler
+        crawler = ctx.request_context.lifespan_context.crawler
         result: CrawlResult = await crawler.arun(url=url, config=run_config)
         if result.success:
             return json.dumps({"url": url, "markdown": result.markdown})
-        return f"Failed to crawl url {url}"
+        return json.dumps(
+            {"success": False, "url": url, "error": "No content found"}, indent=4
+        )
     except Exception as e:
-        print(f"Failed to crawl url {url}: {e}")
-        return f"Failed to crawl url {url}"
+        traceback.print_exc()
+        return json.dumps(
+            {"success": False, "url": url, "error": str(e)}, indent=4
+        )
 
 
-# @mcp.tool("deep_crawl_url")
+@mcp.tool("deep_crawl_url")
 async def indepth_crawl_url(
-    ctx: MCPContext, url: str, max_depth: int = 3, max_concurrent: int = 10
+    ctx: Context, url: str, max_depth: int = 3, max_concurrent: int = 10
 ) -> str:
     """
-    Intelligently crawl a URL based on its type and store content in Supabase.
+    Intelligently crawl a URL based on its type.
 
     This tool automatically detects the URL type and applies the appropriate crawling method:
     - For sitemaps: Extracts and crawls all URLs in parallel
@@ -67,9 +72,8 @@ async def indepth_crawl_url(
         str: a json representation including URL markdown data.
 
     """
-    print("indepth_crawl_url called")
     try:
-        crawler: Crawler = ctx.crawler
+        crawler: Crawler = ctx.request_context.lifespan_context.crawler
         if is_text_url_file(url):
             crawl_results = await crawler.simple_crawl(url)
             crawl_type = "text_file"
@@ -102,13 +106,12 @@ async def indepth_crawl_url(
         )
 
     except Exception as e:
-        print(f"Failed to crawl url {url}: {e}")
         traceback.print_exc()
         return json.dumps({"success": False, "url": url, "error": str(e)}, indent=4)
 
 
-# @mcp.tool("adaptive_crawling")
-async def adaptive_crawling(ctx: MCPContext, url: str, query: str):
+@mcp.tool("adaptive_crawling")
+async def adaptive_crawling(ctx: Context, url: str, query: str):
     """
     Starts at a URL and intelligently crawls linked pages to find an answer to a query.
 
@@ -120,24 +123,72 @@ async def adaptive_crawling(ctx: MCPContext, url: str, query: str):
     Returns:
         A JSON object containing the crawled pages and a synthesized summary.
     """
-    crawler = ctx.crawler.adaptive_crawling
+    crawler = ctx.request_context.lifespan_context.crawler.adaptive_crawling
 
-    result = await crawler.digest(start_url=url, query=query)
-    return json.dumps(
-        {
-            "success": True,
-            "url": url,
-            "urls_crawled": [doc.url for doc in result.knowledge_base][:5],
-            "pages_crawled": len(result.knowledge_base),
-            "results": [
-                {"url": url, "markdown": crawl_result.markdown}
-                for crawl_result in result.knowledge_base
-            ],
-        }
-    )
+    try:
+        result = await crawler.digest(start_url=url, query=query)
+        return json.dumps(
+            {
+                "success": True,
+                "url": url,
+                "urls_crawled": [doc.url for doc in result.knowledge_base][:5],
+                "pages_crawled": len(result.knowledge_base),
+                "results": [
+                    {"url": url, "markdown": crawl_result.markdown}
+                    for crawl_result in result.knowledge_base
+                ],
+            }
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return json.dumps({"success": False, "url": url, "query": query, "error": str(e)}, indent=4)
 
 
-# @mcp.tool("wikipedia_search")
+@mcp.tool("web_search")
+async def web_search(ctx: Context, query: str, max_results: int = 5) -> str:
+    """
+    Searches the web for a query using Serper.dev API and returns relevant URLs.
+
+    Args:
+        ctx: MCP context
+        query: Search query
+        max_results: Number of top results to return
+
+    Returns:
+        JSON string with list of relevant URLs, titles, and snippets
+    """
+    serper_api_key = os.getenv("SERPER_API_KEY")
+    if not serper_api_key:
+        return json.dumps({"success": False, "error": "SERPER_API_KEY not set"})
+
+    url = "https://google.serper.dev/search"
+    headers = {
+        "X-API-KEY": serper_api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {"q": query, "num": max_results}
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload) as resp:
+                data = await resp.json()
+
+        # Extract top results
+        results = []
+        for r in data.get("organic", [])[:max_results]:
+            results.append({
+                "title": r.get("title"),
+                "url": r.get("link"),
+                "snippet": r.get("snippet")
+            })
+
+        return json.dumps({"query": query, "results": results}, indent=4)
+
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)}, indent=4)
+
+
+@mcp.tool("wikipedia_search")
 async def wikipedia_search(
     ctx: Context, query: str, sentences: int = 3, language: str = "en"
 ) -> str:
@@ -153,7 +204,6 @@ async def wikipedia_search(
     Returns:
         A JSON object with the article title, summary, and URL.
     """
-    print("wikipedia called")
     try:
         wikipedia.set_lang(language)  # Set default language
         results = wikipedia.search(query)
@@ -200,7 +250,7 @@ async def wikipedia_search(
 
 
 def main():
-    mcp.run(transport="http")
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
