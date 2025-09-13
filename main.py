@@ -6,7 +6,7 @@ import aiohttp
 
 from crawler import Crawler
 from fastmcp import FastMCP, Context
-from lifespan import mcp_context_lifespan, MCPContext
+from lifespan import mcp_context_lifespan
 from crawl4ai import CrawlerRunConfig, CacheMode, CrawlResult
 import wikipedia
 from utils import is_sitemap_url, is_text_url_file
@@ -45,9 +45,7 @@ async def crawl_single_page(ctx: Context, url: str) -> str:
         )
     except Exception as e:
         traceback.print_exc()
-        return json.dumps(
-            {"success": False, "url": url, "error": str(e)}, indent=4
-        )
+        return json.dumps({"success": False, "url": url, "error": str(e)}, indent=4)
 
 
 @mcp.tool("deep_crawl_url")
@@ -141,7 +139,9 @@ async def adaptive_crawling(ctx: Context, url: str, query: str):
         )
     except Exception as e:
         traceback.print_exc()
-        return json.dumps({"success": False, "url": url, "query": query, "error": str(e)}, indent=4)
+        return json.dumps(
+            {"success": False, "url": url, "query": query, "error": str(e)}, indent=4
+        )
 
 
 @mcp.tool("web_search")
@@ -162,10 +162,7 @@ async def web_search(ctx: Context, query: str, max_results: int = 5) -> str:
         return json.dumps({"success": False, "error": "SERPER_API_KEY not set"})
 
     url = "https://google.serper.dev/search"
-    headers = {
-        "X-API-KEY": serper_api_key,
-        "Content-Type": "application/json"
-    }
+    headers = {"X-API-KEY": serper_api_key, "Content-Type": "application/json"}
     payload = {"q": query, "num": max_results}
 
     try:
@@ -176,11 +173,13 @@ async def web_search(ctx: Context, query: str, max_results: int = 5) -> str:
         # Extract top results
         results = []
         for r in data.get("organic", [])[:max_results]:
-            results.append({
-                "title": r.get("title"),
-                "url": r.get("link"),
-                "snippet": r.get("snippet")
-            })
+            results.append(
+                {
+                    "title": r.get("title"),
+                    "url": r.get("link"),
+                    "snippet": r.get("snippet"),
+                }
+            )
 
         return json.dumps({"query": query, "results": results}, indent=4)
 

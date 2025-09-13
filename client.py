@@ -11,9 +11,7 @@ async def web_crawler_demo(query: str):
                 "command": "python",
                 "args": ["main.py"],
                 "cwd": os.getenv("MCP_CWD"),
-                "env": {
-                    "SERPER_API_KEY": os.getenv("SERPER_API_KEY")
-                }
+                "env": {"SERPER_API_KEY": os.getenv("SERPER_API_KEY")},
             }
         }
     }
